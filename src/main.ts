@@ -2,7 +2,9 @@ import { AppRegistry, Image, Platform, processColor } from 'react-native';
 import { mount } from '@ng-native/platform';
 import { currentConditions, deviceTokens, watchConditions } from '@ng-native/device';
 import { getFabricUIManager, registerPlatformComponents } from '@ng-native/fabric';
+import { provideNativeRouter } from '@ng-native/router';
 import { App } from './app/app.ts';
+import { routes } from './app/app.routes.ts';
 
 registerPlatformComponents(Platform.OS);
 
@@ -18,6 +20,7 @@ AppRegistry.registerRunnable('main', ({ rootTag }: { rootTag: number | string })
     tokens: deviceTokens(),
     // Turns a `require('./x.png')` into something native can load. Without it images are blank.
     resolveAssetSource: (value) => Image.resolveAssetSource(value as never),
+    providers: [provideNativeRouter(routes)],
   });
 
   // Re-resolves the conditions when the device rotates or the theme changes. A rotation dirties

@@ -1,0 +1,228 @@
+import Foundation
+import UIKit
+
+struct NativeFold {
+    var state: String
+    var isSeparating: Bool
+    var hingeOrientation: String?
+    var hingeBounds: CGRect?
+    var occludedBounds: CGRect?
+    var activeDisplay: String?
+    var cameraBounds: [CGRect] = []
+    var hingeMargins: UIEdgeInsets?
+    var regions: [ReservedRegion] = []
+}
+
+protocol FoldProvider {
+    var isFoldable: Bool { get }
+    var supportsTabletop: Bool { get }
+    func fold(in view: UIView?) -> NativeFold?
+    func hingeAngle() -> Double?
+    func hingeStatus() -> String?
+    func observe(_ view: UIView, onChange: @escaping () -> Void)
+}
+
+struct UnsupportedFoldProvider: FoldProvider {
+    var isFoldable: Bool { false }
+    var supportsTabletop: Bool { false }
+
+    func fold(in view: UIView?) -> NativeFold? {
+        return nil
+    }
+
+    func hingeStatus() -> String? {
+        return nil
+    }
+
+    func hingeAngle() -> Double? {
+        return nil
+    }
+
+    func observe(_ view: UIView, onChange: @escaping () -> Void) {}
+}
+
+@objc public class Foldable: NSObject {
+    private let provider: FoldProvider
+
+    init(provider: FoldProvider) {
+        self.provider = provider
+        super.init()
+    }
+
+    override public convenience init() {
+        self.init(provider: Foldable.defaultProvider())
+    }
+
+    private static func defaultProvider() -> FoldProvider {
+        #if canImport(UIKit, _underlyingVersion: 9127.0.85) && !targetEnvironment(macCatalyst)
+        if #available(iOS 27.1, *) {
+            return ReservedRegionFoldProvider(source: UIKitFoldSource())
+        }
+        #endif
+        return UnsupportedFoldProvider()
+    }
+
+    @objc public func isDeviceFoldable() -> Bool {
+        return provider.isFoldable
+    }
+
+    @objc public func supportsTabletop() -> Bool {
+        return provider.supportsTabletop
+    }
+
+    public func getFoldState(in view: UIView? = nil) -> [String: Any] {
+        guard let fold = provider.fold(in: view) else {
+            return ["state": "flat", "isSeparating": false, "posture": "flat"]
+        }
+
+        var result: [String: Any] = [
+            "state": fold.state,
+            "isSeparating": fold.isSeparating,
+            "posture": posture(of: fold)
+        ]
+        result["hingeOrientation"] = fold.hingeOrientation
+        result["hingeBounds"] = fold.hingeBounds.map(bounds(of:))
+        result["occludedBounds"] = fold.occludedBounds.map(bounds(of:))
+        result["activeDisplay"] = fold.activeDisplay
+        if let margins = fold.hingeMargins {
+            result["hingeMargins"] = [
+                "top": Int(margins.top.rounded()),
+                "right": Int(margins.right.rounded()),
+                "bottom": Int(margins.bottom.rounded()),
+                "left": Int(margins.left.rounded())
+            ]
+        }
+        if !fold.cameraBounds.isEmpty {
+            result["cameraBounds"] = fold.cameraBounds.map(bounds(of:))
+        }
+        return result
+    }
+
+    @objc public func getHingeAngle() -> [String: Any] {
+        return [
+            "angle": provider.hingeAngle().map { $0 as Any } ?? NSNull(),
+            "status": provider.hingeStatus().map { $0 as Any } ?? NSNull()
+        ]
+    }
+
+    public func getReservedRegions(in view: UIView? = nil) -> [String: Any] {
+        let regions = provider.fold(in: view)?.regions ?? []
+        return [
+            "regions": regions.map { region in
+                [
+                    "kind": region.kind == .division ? "division" : "occlusion",
+                    "isActive": region.isActive,
+                    "x": Int(region.frame.origin.x.rounded()),
+                    "y": Int(region.frame.origin.y.rounded()),
+                    "width": Int(region.frame.width.rounded()),
+                    "height": Int(region.frame.height.rounded()),
+                    "margins": [
+                        "top": Int(region.margins.top.rounded()),
+                        "right": Int(region.margins.right.rounded()),
+                        "bottom": Int(region.margins.bottom.rounded()),
+                        "left": Int(region.margins.left.rounded())
+                    ]
+                ]
+            }
+        ]
+    }
+
+    @objc public func barPlacement(in traits: UITraitCollection, view: UIView? = nil) -> [String: Any] {
+        let edge = verticalBarEdge(of: traits) ?? view.flatMap(verticalBarEdge(inferredFrom:))
+        let inset = view.map { barInset(of: edge, in: $0) } ?? 0
+        return [
+            "verticalBarEdge": edge.map { $0 as Any } ?? NSNull(),
+            "inset": inset
+        ]
+    }
+
+    private func barInset(of edge: String?, in view: UIView) -> Double {
+        guard let edge else { return 0 }
+
+        view.layoutIfNeeded()
+        let rightToLeft = view.effectiveUserInterfaceLayoutDirection == .rightToLeft
+        let onRight = (edge == "trailing") != rightToLeft
+        return Double((onRight ? view.safeAreaInsets.right : view.safeAreaInsets.left).rounded())
+    }
+
+    private func verticalBarEdge(of traits: UITraitCollection) -> String? {
+        #if canImport(UIKit, _underlyingVersion: 9127.0.85) && !targetEnvironment(macCatalyst)
+        if #available(iOS 27.1, *) {
+            switch traits.verticalBarEdge {
+            case .leading: return "leading"
+            case .trailing: return "trailing"
+            default: return nil
+            }
+        }
+        #endif
+        return nil
+    }
+
+    private func verticalBarEdge(inferredFrom view: UIView) -> String? {
+        #if canImport(UIKit, _underlyingVersion: 9127.0.85) && !targetEnvironment(macCatalyst)
+        return nil
+        #else
+        guard #available(iOS 27.1, *) else { return nil }
+
+        view.layoutIfNeeded()
+        let insets = view.safeAreaInsets
+        let rightToLeft = view.effectiveUserInterfaceLayoutDirection == .rightToLeft
+
+        if insets.right >= barInsetThreshold { return rightToLeft ? "leading" : "trailing" }
+        if insets.left >= barInsetThreshold { return rightToLeft ? "trailing" : "leading" }
+        return nil
+        #endif
+    }
+
+    private let barInsetThreshold: CGFloat = 70
+
+    public func observeChanges(in view: UIView, onChange: @escaping () -> Void) {
+        provider.observe(view, onChange: onChange)
+    }
+
+    @objc public func sizeClass(
+        horizontal: UIUserInterfaceSizeClass,
+        vertical: UIUserInterfaceSizeClass,
+        width: CGFloat,
+        height: CGFloat
+    ) -> [String: String] {
+        return [
+            "horizontal": name(of: horizontal),
+            "vertical": name(of: vertical),
+            "widthClass": widthClass(of: width),
+            "heightClass": heightClass(of: height)
+        ]
+    }
+
+    private func name(of sizeClass: UIUserInterfaceSizeClass) -> String {
+        return sizeClass == .regular ? "regular" : "compact"
+    }
+
+    private func widthClass(of width: CGFloat) -> String {
+        if width >= 1600 { return "extraLarge" }
+        if width >= 1200 { return "large" }
+        if width >= 840 { return "expanded" }
+        if width >= 600 { return "medium" }
+        return "compact"
+    }
+
+    private func heightClass(of height: CGFloat) -> String {
+        if height >= 900 { return "expanded" }
+        if height >= 480 { return "medium" }
+        return "compact"
+    }
+
+    private func posture(of fold: NativeFold) -> String {
+        guard fold.state == "half-opened" else { return "flat" }
+        return fold.hingeOrientation == "horizontal" ? "tabletop" : "book"
+    }
+
+    private func bounds(of rect: CGRect) -> [String: Int] {
+        return [
+            "x": Int(rect.origin.x.rounded()),
+            "y": Int(rect.origin.y.rounded()),
+            "width": Int(rect.size.width.rounded()),
+            "height": Int(rect.size.height.rounded())
+        ]
+    }
+}

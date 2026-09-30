@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "hinge-guess-angular-native",
+    "name": "Hinge Guess",
     "slug": "hinge-guess-angular-native",
     "version": "1.0.0",
     "platforms": [
@@ -11,7 +11,8 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "io.github.erkamyaman.hingeguess.native"
     },
     "android": {
       "adaptiveIcon": {
@@ -20,9 +21,10 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "io.github.erkamyaman.hingeguess.native"
     },
-    "scheme": "myapp",
+    "scheme": "hingeguess",
     "extra": {
       "router": {
         "root": "src/app"

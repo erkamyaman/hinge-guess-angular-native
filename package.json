@@ -6,33 +6,39 @@
   "dependencies": {
     "@angular/common": "^22.0.0",
     "@angular/core": "^22.0.0",
+    "@angular/router": "^22.2.1",
+    "@ng-icons/core": "^36.1.0",
+    "@ng-native/components": "0.2.0",
+    "@ng-native/device": "0.2.0",
+    "@ng-native/fabric": "0.2.0",
+    "@ng-native/icons": "^0.2.0",
+    "@ng-native/metro": "0.2.0",
+    "@ng-native/platform": "0.2.0",
+    "@ng-native/router": "^0.2.0",
     "expo": "~57.0.26",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.4",
     "react": "19.2.3",
     "react-native": "0.86.3",
     "react-native-safe-area-context": "~5.7.0",
-    "@ng-native/device": "0.2.0",
-    "@ng-native/platform": "0.2.0",
-    "@ng-native/fabric": "0.2.0",
-    "@ng-native/metro": "0.2.0",
-    "@ng-native/components": "0.2.0"
+    "react-native-screens": "~4.26.0",
+    "react-native-svg": "15.15.4"
   },
   "devDependencies": {
     "@angular/compiler-cli": "^22.0.0",
     "@babel/core": "^7.29.7",
+    "@ng-native/testing": "0.2.0",
     "@types/react": "~19.2.2",
     "typescript": "~6.0.3",
-    "vitest": "^5.0.0",
-    "@ng-native/testing": "0.2.0"
+    "vitest": "^5.0.0"
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "typecheck": "ngc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },

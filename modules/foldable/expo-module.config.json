@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["FoldableModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.foldable.FoldableModule"]
+  }
+}
