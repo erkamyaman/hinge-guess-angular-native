@@ -14,7 +14,7 @@ const CREASE_MARGIN = 20;
       @if (!foldable.foldable() || foldable.angle() === null) {
         <view class="notice">
           <text class="headline">This one needs a hinge</text>
-          <text class="note">Open it on an iPhone Duo or an Android foldable. The fold is the controller.</text>
+          <text class="note">Open it on an iPhone Duo. The fold is the controller.</text>
         </view>
       } @else if (!foldable.open()) {
         <app-unfold-prompt />
@@ -70,6 +70,7 @@ const CREASE_MARGIN = 20;
     }
     .dial {
       position: absolute;
+      pointer-events: none;
     }
   `,
 })

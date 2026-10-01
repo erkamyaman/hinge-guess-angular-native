@@ -49,7 +49,12 @@ export class Foldable {
   private readonly foldState = signal<FoldState>(FLAT);
   private readonly angleState = signal<number | null>(null);
 
-  readonly foldable = this.foldableState.asReadonly();
+  readonly foldable = computed(
+    () =>
+      this.foldableState() ||
+      this.angleState() !== null ||
+      this.foldState().activeDisplay !== undefined,
+  );
   readonly fold = this.foldState.asReadonly();
   readonly angle = this.angleState.asReadonly();
   readonly open = computed(
@@ -82,7 +87,7 @@ export class Foldable {
     ]);
     console.log('[fold] initial', JSON.stringify({ foldable, fold, angle }));
     this.foldableState.set(foldable);
-    this.foldState.set(fold);
-    this.angleState.set(angle);
+    if (this.foldState() === FLAT) this.foldState.set(fold);
+    if (this.angleState() === null) this.angleState.set(angle);
   }
 }
